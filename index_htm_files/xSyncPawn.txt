@@ -1,0 +1,310 @@
+Class xSyncPawn extends xPawn;
+
+//Currently gotta load the texture file where the skins reside... eventually
+//the texture file/directory will be set the same as the Skin1 (Head) on the
+//xPawn being targeted, so this can then go away.
+#exec OBJ LOAD FILE=CinTextures.utx
+#exec OBJ LOAD FILE=CinSounds1.uax
+
+var(AI) string LipAnimationString;
+var(AI) string SkinSwapSet;
+var float HowManySwaps;
+var int SwapNum;
+var string Phoneme;
+var int SwapTime;
+var int BlinkTime;
+
+
+auto state Blinking
+{//Begin state
+Begin:
+
+         if (SkinSwapSet == "Charlie")
+         {
+         Blink:
+
+         BlinkTime = Rand(8);
+         Sleep(BlinkTime);
+         Skins[1] = Texture'CinTextures.Charlie.CharlieHead_Blink';
+         Sleep(0.1);
+         Skins[1] = Texture'CinTextures.Charlie.CharlieHead';
+
+         GoTo('Blink');
+
+         }
+
+         if (SkinSwapSet == "Sarah")
+         {
+         Blink2:
+
+         BlinkTime = Rand(8);
+         Sleep(BlinkTime);
+         Skins[1] = Texture'CinTextures.Sarah.SarahHead_Blink';
+         Sleep(0.1);
+         Skins[1] = Texture'CinTextures.Sarah.SarahHead';
+
+         GoTo('Blink2');
+
+         }
+
+}//End state
+
+state EyesClosed
+{//Begin state
+Begin:
+
+        if (SkinSwapSet == "Charlie")
+        {
+        Skins[1] = Texture'CinTextures.Charlie.CharlieHead_Blink';
+        }
+
+        if (SkinSwapSet == "Sarah")
+        {
+        Skins[1] = Texture'CinTextures.Sarah.SarahHead_Blink';
+        }
+}
+
+
+state SwappingSkins
+{//Begin state
+
+Begin:
+    //Note, LipAnimationString was already set by the scripted action which
+    //called it
+    //
+    //Initialize SwapNum (which will track how many times we've swapped
+    SwapNum = 0;
+    //
+    //Set how many times we are going to swap based on length of animation string
+    HowManySwaps = Len(LipAnimationString);
+    //Set how long we are going to wait between swaps
+    //
+Swap:
+    //Now let's get the first or next phoneme letter from our AnimationString
+    //Added this code to have the xSyncPawn blink 1 out of 4 times it fires
+    //a phoneme
+    BlinkTime = Rand(6);
+
+    Phoneme = Mid(LipAnimationString, SwapNum, 1);
+
+    //The fun part! Swap to the first or next phoneme specified by the
+    //AnimationString.
+    if (Phoneme == "a")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead_A';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead_A';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "e")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead_E';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead_E';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "o")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead_O';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead_O';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "u")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead_U';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead_U';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "c")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+                if (BlinkTime == 1)
+                {
+                //Blink during talking hack
+                Skins[1] = Texture'CinTextures.Sarah.SarahHead_C';
+                Sleep(0.1);
+                Skins[1] = Texture'CinTextures.Sarah.SarahHead_C_Blink';
+                Sleep(0.1);
+                }
+                else
+                {
+                Skins[1] = Texture'CinTextures.Sarah.SarahHead_C';
+                Sleep(0.2);
+                }
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+                if (BlinkTime == 1)
+                {
+                //Blink during talking hack
+                Skins[1] = Texture'CinTextures.Charlie.CharlieHead_C';
+                Sleep(0.1);
+                Skins[1] = Texture'CinTextures.Charlie.CharlieHead_C_Blink';
+                Sleep(0.1);
+                }
+                else
+                {
+                Skins[1] = Texture'CinTextures.Charlie.CharlieHead_C';
+                Sleep(0.2);
+                }
+           }
+    }
+
+    if (Phoneme == "d")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead_D';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead_D';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "f")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead_F';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead_F';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "m")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead_M';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead_M';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "w")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead_W';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead_W';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "z")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+           Skins[1] = Texture'CinTextures.Sarah.SarahHead';
+           Sleep(0.2);
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+           Skins[1] = Texture'CinTextures.Charlie.CharlieHead';
+           Sleep(0.2);
+           }
+    }
+
+    if (Phoneme == "x")
+    {
+           if (SkinSwapSet == "Sarah")
+           {
+                if (BlinkTime == 1)
+                {
+                Skins[1] = Texture'CinTextures.Sarah.SarahHead_Blink';
+                Sleep (0.1);
+                Skins[1] = Texture'CinTextures.Sarah.SarahHead';
+                Sleep (0.1);
+                }
+                else
+                {
+                Sleep(0.2);
+                }
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+                if (BlinkTime == 1)
+                {
+                Skins[1] = Texture'CinTextures.Charlie.CharlieHead_Blink';
+                Sleep (0.1);
+                Skins[1] = Texture'CinTextures.Charlie.CharlieHead';
+                Sleep (0.1);
+                }
+                else
+                {
+                Sleep(0.2);
+                }
+           }
+    }
+
+    //Increment swaptime now that we've gone through the loop
+    SwapNum++;
+    //If we've swapped to the end of the Animation String, return to original
+    //skin and terminate. Otherwise, keep on swappin'
+    if (SwapNum < HowManySwaps)
+    {
+    Goto('Swap');
+    }
+    else
+    {
+           //This sets xPawn to non-talking skin and kills the swapping state
+
+           if (SkinSwapSet == "Sarah")
+           {
+                Skins[1] = Texture'CinTextures.Sarah.SarahHead';
+           }
+           if (SkinSwapSet == "Charlie")
+           {
+                Skins[1] = Texture'CinTextures.Charlie.CharlieHead';
+           }
+
+    GotoState('Blinking');
+    }
+
+}//End state

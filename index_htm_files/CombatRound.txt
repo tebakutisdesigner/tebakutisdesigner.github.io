@@ -1,0 +1,99 @@
+--=======================================
+-- function:  Combat
+-- author:    Eric Bakutis
+-- created:   July 17, 2007
+-- returns:   n/a
+-- descript:  Handles a combat round between an attacker and defender
+--=======================================
+function Combat(Attacker,Defender)
+
+    --create local variables for attack and defense
+    local Attack
+    local WeaponRating
+    local WeaponDamage
+    local Defense
+    local ArmorRating
+
+    --error checking begins here
+    
+    --error check--make sure defender is alive--otherwise, abort attack
+    --if the defender is already dead (active = false)...
+    if Defender.active == false then
+        --tell attacker they are hitting a corpse...
+        print("Can't attack that... it's already dead!")
+        --and abort the function
+        return
+    end
+
+    --start by setting attack equal to the Attacker's str + dex
+    Attack = Attacker["strength"] + Attacker["dexterity"]
+
+    --find the weapon Attacker has and get the damage of that weapon
+    --find out how long the weapon table is
+    local iWeaponTableLength = table.getn(gWeaponTable)
+
+    --cycle through table to match weapon in table to weapon held by Attacker
+    for index = 1, iWeaponTableLength do
+        --if the name of the weapon in the index being examined matches the
+        --name of the Attacker's, record that weapon's damage in WeaponRating
+        if gWeaponTable[index].name == Attacker.weapon then
+            WeaponRating = gWeaponTable[index].damage
+        end
+    end
+
+    --Now that we have the damage rating of the weapon, base a random on that
+    --The damage by the weapon is 1 to it's max damage, set by WeaponRating
+    WeaponDamage = math.random(1,WeaponRating)
+
+    --Now finalize attack by adding the original var (str+dex) to WeaponDamage
+    Attack = Attack + WeaponDamage
+
+    --the next step is to get the defense of the creature being attacked
+    --start by setting defense equal to the Defender's toughness + dex
+    Defense = Defender.toughness + Defender.dexterity
+
+    --find the armor of the Defender and get the armor value
+    --find out how long the armor table is
+    local iArmorTableLength = table.getn(gArmorTable)
+
+    --cycle through table to match armor in it to armor worn by Defender
+    for index = 1, iArmorTableLength do
+        --if the name of the armor in the index being examined matches the
+        --name of the Defender's, record that armor's defense in ArmorRating
+        if gArmorTable[index].name == Defender.armor then
+            ArmorRating = gArmorTable[index].defense
+        end
+    end
+
+    --Now finalize defense by adding the original var (dex+tough) to ArmorRating
+    Defense = Defense + ArmorRating
+    
+    --Now that we have final attack and defense values, do a combat round
+    --if the Defender's defense is less than the Attacker's attack...
+    if Defense < Attack then
+        --deal damage to the Defender based on how much Attack exceed Defense
+            local DamageDone = Attack - Defense
+            Defender.hitPoints = Defender.hitPoints - DamageDone
+            print(Attacker.name .. " hits " .. Defender.name .. " for " .. DamageDone .. " damage!\n")
+        --otherwise (attack did not exceed defense) tell the Attacker they missed
+    else
+        print(Attacker.name .. " swings widly at " .. Defender.name .. ", but misses!\n")
+    end
+
+    --Expose the Attack and Defense values
+    print(Attacker.name .. "'s Attack was: " .. Attack)
+    print(Defender.name .. "'s Defense was: " .. Defense)
+    print("")
+
+    --Report remaining HP of both combatants.
+    print(Attacker.name .. " has " .. Attacker.hitPoints .. " hitpoints remaining.")
+    print(Defender.name .. " has " .. Defender.hitPoints .. " hitpoints remaining.")
+    print("")
+
+    --now check to see if the Defender died... if so, remove them from the game
+    if Defender.hitPoints <= 0 then
+        print(Defender.name .. " has died.")
+        Defender.active = false
+    end
+
+end

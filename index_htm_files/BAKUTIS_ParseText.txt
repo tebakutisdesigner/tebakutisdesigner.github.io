@@ -1,0 +1,65 @@
+--=======================================
+-- function:  ParseText
+-- author:    Eric Bakutis
+-- created:   July 26, 2007
+-- returns:   The table associated with a named character from the user
+-- descript:  This function searches a table for a named NPC entered by the
+--            user and returns the index of that NPC in the table, if the
+--            NPC exists.
+--=======================================
+function ParseText(tMergedTable)
+
+    --make sure the user sent in a table, cancel function if they didn't.
+    if type(tMergedTable) ~= "table" then
+        --tell the user why the function didn't run
+        print("Please enter the name of a valid table.")
+        return
+    end
+
+    --get the length of the table given as input
+    local iMergedTableLen = table.getn(tMergedTable)
+
+    --hold the index that we found matching the user input
+    local iFoundIndex
+
+    --handles getting input from the user
+    input = io.input(io.stdin)
+
+    --set a boolean to determine if we found something or not
+    local bFoundUserInput = false
+
+    local sUserInput
+    --commented out the prompt so it doesn't double with SelectCombatants,
+    --where it is primarily used.
+    --print("Please enter the name you'd like to search for in the table:")
+    input:seek("set")
+    sUserInput = input:read()
+
+    --let's search each index of the table up to the last index for the name
+    --the user entered, with the number of loops sets by iMergedTableLen
+    for index = 1,iMergedTableLen do
+        for key,value in tMergedTable[index] do
+            --if the "name" value in table matches the user input, found it!
+            if key == "name" and value == sUserInput then
+                --tell the user we found it, set boolean to true to exit the
+                --loop, and then save the table index where we found the name
+                print("Found the name " .. sUserInput .. " in index " .. index .. ".")
+                bFoundUserInput = true
+                iFoundIndex = index
+            end
+        end
+    end
+
+    --If we didn't find the name AT ALL, return nil
+    if bFoundUserInput == false then
+        --removing feedback line so it won't double with SelectCombatants
+        --print("Could not find the value.")
+        return nil
+    --else if we DID find the name, return the table that matches that name
+    else
+        --removing feedback line so it won't double with SelectCombatants
+        --print(iFoundIndex)
+        return tMergedTable[iFoundIndex]
+    end
+
+end

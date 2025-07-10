@@ -1,0 +1,97 @@
+(Start Game)
+
+go north
+
+use rock
+
+take ropes
+
+take blindfold
+
+go north (to porch)
+
+go north (go inside house)
+
+close door
+
+look hall-tree
+
+open drawer
+
+take knife
+
+take bandage
+
+close drawer
+
+look corpse
+
+take paper
+
+use knife - corpse
+
+take key
+
+use key
+
+open double-doors
+
+go north (into hallway)
+
+look trapdoor
+
+use ropes - handle
+
+go north (into kitchen)
+
+look oven
+
+open oven
+
+yes
+
+(defeat the enemy)
+
+use bandage (if necessary)
+
+open door
+
+go north (to back porch)
+
+go north (to forest)
+
+look gravestones
+
+attack shadow
+
+(defeat the enemy)
+
+look gravestones
+
+go south (to back porch)
+
+go south (to kitchen)
+
+go south (to hallway)
+
+take ropes
+
+open trapdoor
+
+yes
+
+attack madwoman
+
+(defeat the enemy)
+
+go north (to kitchen)
+
+go north (to back porch)
+
+go north (to forest)
+
+go north (to road)
+
+(View epilogue)
+
+(Complete Game)

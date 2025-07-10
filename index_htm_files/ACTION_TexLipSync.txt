@@ -1,0 +1,60 @@
+//=============================================================================
+
+// AIScript action to implement texture based lipsyncing
+// by Eric 'StarFury' Bakutis
+
+//=============================================================================
+
+class ACTION_TEXLipSync extends ScriptedAction;
+
+//Currently gotta load the texture file where the skins reside... eventually
+//the texture file/directory will be set the same as the Skin1 (Head) on the
+//xPawn being targeted, so this can then go away.
+
+var(Action) name Target; //This tells the action what xPawn skin to change
+var(Action) string AnimationString; //Tells what skins to swap
+var(Action)	sound Sound; //Tells controller what spoken line to play with swaps
+
+function bool InitActionFor(ScriptedController C)
+{//start function
+
+    local Actor a;
+    local xSyncPawn MyPawn;
+	local PlayerController P;
+
+  	// First, let's start playing the sound that goes with the lipsynced line
+	ForEach C.DynamicActors(class'PlayerController', P)
+	{
+			P.ClientPlaySound(Sound);
+	}
+
+    //Now, we'll grab the targeted xPawn
+    if(Target != 'None')
+	{//start if
+		//Find all xPawns with the name specified in 'Target'
+        ForEach C.AllActors(class'Actor', a, Target)
+        {//start ForEach
+
+        //Now to change the AnimationString of the targeted pawn to the
+        //AnimationString the user entered in the ACTION_TEXLipSync command
+        MyPawn = xSyncPawn(C.Pawn);
+        MyPawn.LipAnimationString = AnimationString;
+
+        //Now that our xSyncPawn knows what skins to swap, start it swapping
+        //so the line we just played with have a visual component
+        a.GotoState('SwappingSkins');
+
+        }//close ForEach
+
+    }//close if
+
+    return false;
+
+}//close function
+
+function string GetActionString()
+{
+	return ActionString@Target;
+	return ActionString@AnimationString;
+	return ActionString@Sound;
+}

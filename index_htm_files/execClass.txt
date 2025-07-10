@@ -1,0 +1,1156 @@
+// ============================================================
+// Project      :   Executioner Class File
+// File         :   .\execClass.cs
+// Author       :   Eric Bakutis The Guildhall at SMU
+// Editor       :   Torsion
+// Description  :   This is the code for the Executioner super boss 
+// ============================================================
+
+//Global variables associated with this code can be found in globalconfig.cs
+
+function execClass::onLevelLoaded(%this, %scenegraph)
+{
+ $exec = %this; 
+ $exec.InGame = true;
+
+ /*
+ if(!$BossMusicPlayed)
+ {
+ alxPlay(BossIntro); 
+ schedule(1200, 0, "playBossMusic");
+ $BossMusicPlayed = true;
+ }
+ */
+ 
+ $exec.AttackTimer = 4;
+ $exec.StompTimer = 0;
+ $exec.TauntTimer = 2;
+ $exec.deathskulls = 1; 
+
+ //start the boss off waiting for an AI update and moving right
+ $exec.setTimerOn(500); //check AI once every half second
+ $exec.moveLeft = true; //start the zombie off by moving right
+ $exec.Health = $eExecHealth;
+ $exec.SwordType = "flame";
+ 
+ $exec.setPhysicsSuppress(true);
+
+ //Apply physics
+ %this.setConstantForceY($pGravity); //apply gravity to the boss
+
+ //Initialize the boss's health bar and element
+ ExecStage1.setVisible(true);
+ ExecElementGUI();
+ $exec.Stage = 1; //set the boss's starting speed stage
+
+ $exec.setCollisionLayers("0 1 2 3 4 5 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31");
+ 
+ //Start this mofo walking
+ //ExecLeftFoot();
+
+}
+
+function playBossMusic()
+{
+ alxPlay(BossMusic);
+}
+
+//This goes along with movement functions and updates the rat's horizontal movement each
+//time Torque redraws the screen.
+function execClass::updateHorizontal(%this)
+{
+     //If the boss is moving left...
+     if(%this.moveLeft)
+     {
+         //We set the boss's negative X velocity, making him shamble left.
+         %this.setLinearVelocityX(-$eExecWalkSpeed);
+     }
+
+     //If the boss is moving right...
+     if(%this.moveRight)
+     {
+          //We set the boss's positive X velocity, making him shamble right.
+          %this.setLinearVelocityX($eExecWalkSpeed);
+     }
+
+     //If the boss is not moving left or right...
+     if(!%this.moveLeft && !%this.moveRight)
+     {
+          //We set the boss's X velocity to 0, meaning he's not moving left or right
+          %this.setLinearVelocityX(0);
+     }
+}
+
+//This function checks on each AI update to see if the player is close enough for the zombie to attack, and attacks if so
+function execClass::execCheckAttack(%this)
+{
+     //Get the X and Y position of the player and the X/Y position of the zombie and save them in local variables
+     %playerPosition = $pGuy.getPositionX();
+     %playerPositionY = $pGuy.getPositionY();
+     %enemyPosition = $exec.getPositionX();
+     %enemyPositionY = $exec.getPositionY();
+     
+     //get the X and Y distance between the player and zombie
+     %AttackDistance = (%playerPosition - %enemyPosition);
+     %AttackDistanceY = (%playerPositionY - %enemyPositionY);
+     
+     //Do some math to make our results positive for comparison
+     if(%AttackDistance < 0)
+     {
+      %AttackDistance = (%AttackDistance * -1);
+     }
+     
+     if(%AttackDistanceY < 0)
+     {
+      %AttackDistanceY = (%AttackDistanceY * -1);
+     }
+     
+     //if the AttackDistance is within the boss's attack distance and the boss isn't currently attacking, attack!
+     if(%AttackDistance < $eExecAttackDistance)
+     {
+
+       //This checks attack distance vertically to prevent the boss from attacking when the player is below or above him
+       if(%AttackDistanceY < 15)
+       {
+
+           if($exec.AttackTimer > 3)
+           {
+                  //Now that we've sorted out facing, claw with sharp claws!
+                  //alxPlay( zombieSound_attackLunge ); // play a sound      
+                  $exec.Attacking = true;
+                  $exec.AttackTimer = 0;
+
+                 //We also need to change the boss's facing so it doesn't attack in the wrong direction, so, we'll see if the
+                 //player is to the left or right of the boss and adjust it's facing accordingly.
+                 if(%playerPosition < %enemyPosition && !$PlayerDead)  // then the player is to the left of the zombie, and we need to face left
+                 {
+                   $exec.setTimerOff();
+                   $exec.setFlip(true, false); //flip to proper facing
+                   $exec.setLinearVelocityX(0); //eliminate prior velocity (no longer patrolling)
+                   $exec.setImmovable(true);         
+                   ExecAttackWindUp();
+                   //%this.moveTo(%playerPosition, %playerPositionY, $eSuperZombieRunSpeed, false, false, false, 1); //lunge toward the player
+                 }
+                 else if(%playerPosition > %enemyPosition && !$PlayerDead)// if the first case isn't true, the player must be to the right of the zombie, and it must face right.
+                 {
+                   $exec.setTimerOff();
+                   $exec.setFlip(false, false); //flip to proper facing
+                   $exec.setLinearVelocityX(0); //eliminate prior velocity (no longer patrolling)
+                   $exec.setImmovable(true);            
+                   ExecAttackWindUp();
+                   //%this.moveTo(%playerPosition, %playerPositionY, $eSuperZombieRunSpeed, false, false, false, 1); //lunge toward the player
+                 }
+           }
+           else
+           {
+             $exec.AttackTimer = $exec.AttackTimer + 1;
+             $exec.Attacking = false;
+           }
+
+       } //Close check Y loop
+
+       else
+       {
+       //Assuming the enemy wasn't in range to attack or is no longer in range, turn it's attack off.
+        $exec.Attacking = false;   
+       }
+
+     } //Close check X loop
+
+     else
+     {
+     //Assuming the enemy wasn't in range to attack or is no longer in range, turn it's attack off.
+      $exec.Attacking = false;   
+     }
+
+} //Close check attack loop
+
+
+function execClass::updateMovement(%this)
+{
+     //Now that the enemy has made a movement decision, let's update it's horizontal movement and start animations.     
+     %this.updateHorizontal();
+     %this.setCurrentAnimation();
+     %this.execCheckAttack();
+     %this.execCheckStomp();
+     %this.execCheckElement();
+}
+
+//This function changes the executioner's vulnerability to elements based on how many times the player hit him.
+function execClass::execCheckElement(%this)
+{
+  
+  //If the player has successfully hit the executioner five times...
+  if($eExecSwitchTimer > $eExecSwitchAt)
+  {
+     //Reset the switch timer
+     $eExecSwitchTimer = 0;
+
+     //Choose a random element     
+     %newElement = getRandom(0,3);
+     
+        //Now get ready to apply it to the Executioner
+        if(%newElement == 0 && $exec.SwordType !$= "ice")
+        {
+          %SwordTypeTemp = "ice";  
+        }
+        else if(%newElement == 1 && $exec.SwordType !$= "flame")
+        {
+          %SwordTypeTemp = "flame";         
+        }
+        else if(%newElement == 2 && $exec.SwordType !$= "holy")
+        {
+          %SwordTypeTemp = "holy";         
+        }
+        else if(%newElement == 3 && $exec.SwordType !$= "demonic")
+        {
+          %SwordTypeTemp = "demonic";         
+        }
+        else
+        {
+          %SwordTypeTemp = "holy";
+        }
+     
+     //echo("Before switch");
+     //echo(%SwordTypeTemp);
+     //echo($exec.SwordType);
+     
+     /*   
+     //Now compare the new element to the old   
+     if($exec.SwordType $= %SwordTypeTemp) //we had a misfire, it's the same element
+     {
+      $exec.SwordType = "holy";  //placeholder code until I can come up with something better
+     }
+     else
+     {
+      $exec.SwordType = %SwordTypeTemp;  //apply the new element to the exec
+     }
+     */
+     
+     $exec.SwordType = %SwordTypeTemp;  //apply the new element to the exec
+     ExecElementGUI();                //update the Executioner's GUI to the new element
+     
+     //echo("After switch");
+     //echo($exec.SwordType);     
+  }
+}
+
+function execClass::execCheckStomp()
+{
+   %PlayerPosY = $pGuy.getPositionY();
+   
+   if(%PlayerPosY < 4)
+   {
+     $exec.StompTimer = $exec.StompTimer + 1;   
+   }
+   else
+   {
+     $exec.StompTimer = 0;
+     $pGuy.setCollisionLayers("0 1 3 4 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31");     
+   }
+   
+   if($exec.StompTimer > 6)
+   {       
+     $exec.setTimerOff();
+     $exec.setLinearVelocityX(0);
+     $exec.StompTimer = 0;
+
+               //Code block to determine element
+               if($exec.SwordType $= "demonic")
+               {
+                %objectAnim = ExecStomp_Demonic;   
+               }
+               if($exec.SwordType $= "holy")
+               {
+                %objectAnim = ExecStomp_Holy;   
+               }                          
+               if($exec.SwordType $= "flame")
+               {
+                %objectAnim = ExecStomp_Flame; 
+               }
+               if($exec.SwordType $= "ice")
+               {
+                %objectAnim = ExecStomp_Ice;    
+               }         
+         
+         $exec.playAnimToEnd(%objectAnim);
+
+     alxPlay( execSound_taunt );
+     $exec.Walking = false; 
+     schedule(1000, 0, "StompThePlayer");
+   }
+}
+
+function StompThePlayer()
+{
+     alxPlay( execSound_land );     
+     $pGuy.setCollisionLayers("0 1 4 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31");
+     $exec.setTimerOn(500);
+     
+     %ExecPosX = $exec.getPositionX();
+     %ExecPosY = $exec.getPositionY();
+     //Spawn a steam particle from the stomp
+     
+     if($exec.FacingLeft)
+     { 
+         %explosion = new t2dParticleEffect() 
+  	     { 
+           scenegraph = $pGuy.scenegraph; 
+         };
+           %explosion.loadEffect("~/data/particles/bigsteam_jet.eff");
+  	       %explosion.setEffectLifeMode("KILL", 0.1);
+  	       %explosion.setPosition(%ExecPosX-10, %ExecPosY+30);
+           %explosion.playEffect();
+     }
+     else
+     {
+         %explosion = new t2dParticleEffect() 
+  	     { 
+           scenegraph = $pGuy.scenegraph; 
+         };
+           %explosion.loadEffect("~/data/particles/bigsteam_jet.eff");
+  	       %explosion.setEffectLifeMode("KILL", 0.1);
+  	       %explosion.setPosition(%ExecPosX+10, %ExecPosY+30);
+           %explosion.playEffect();
+     }
+ 
+     sceneWindow2D.startCameraShake(100, 1);
+}
+
+//This changes the zombie's animation based on the direction he is traveling.
+function execClass::setCurrentAnimation(%this)
+{
+     //Get the X and Y velocity of the enemy
+     %xVelocity = %this.getLinearVelocityX();
+     %yVelocity = %this.getLinearVelocityY();
+
+     //If the boss's X velocity is greater than 0, he's moving right...
+     if(%xVelocity > 0)
+     {
+          //...so flip his sprite along the X axis (he faces right by default)
+          %this.setFlip(false, false);
+     }
+     //On the other hand, if the boss's X velocity is less than 0, he's moving left...
+     else if(%xVelocity < 0)
+     {
+          //...so don't flip his sprite along the X axis, as he is already facing right.
+          %this.setFlip(true, false);
+     }
+
+     
+     //If the boss is attacking, let's play that anim before all others.
+     if(%this.Attacking)
+     {
+               //Code block to determine element
+               if($exec.SwordType $= "demonic")
+               {
+                %objectAnim = execAttack_Demonic;   
+               }
+               if($exec.SwordType $= "holy")
+               {
+                %objectAnim = execAttack_Holy;   
+               }                          
+               if($exec.SwordType $= "flame")
+               {
+                %objectAnim = execAttack_Flame; 
+               }
+               if($exec.SwordType $= "ice")
+               {
+                %objectAnim = execAttack_Ice;    
+               }         
+         
+         %this.playAnimToEnd(%objectAnim);
+     }
+     
+     else
+     
+     {  //this starts the rest of the animation loop if the rat isn't attacking
+
+          //If his X velocity is 0, we'll play the stand anim.
+          if(%xVelocity == 0)
+          {
+               //Code block to determine element
+               if($exec.SwordType $= "demonic")
+               {
+                %objectAnim = execStand_Demonic;   
+               }
+               if($exec.SwordType $= "holy")
+               {
+                %objectAnim = execStand_Holy;   
+               }                          
+               if($exec.SwordType $= "flame")
+               {
+                %objectAnim = execStand_Flame; 
+               }
+               if($exec.SwordType $= "ice")
+               {
+                %objectAnim = execStand_Ice;    
+               }         
+         
+           %this.playAnimToEnd(%objectAnim);
+
+          }
+          //If our zombie is moving horizontally, we play the run anim.
+          else
+          {
+               //Code block to determine element
+               if($exec.SwordType $= "demonic")
+               {
+                %objectAnim = execWalk_Demonic;   
+               }
+               if($exec.SwordType $= "holy")
+               {
+                %objectAnim = execWalk_Holy;   
+               }                          
+               if($exec.SwordType $= "flame")
+               {
+                %objectAnim = execWalk_Flame; 
+               }
+               if($exec.SwordType $= "ice")
+               {
+                %objectAnim = execWalk_Ice;    
+               }         
+         
+            %this.playAnimToEnd(%objectAnim);        
+           }
+          
+      } //this ends the other animation loop
+}
+
+function execClass::onCollision(%srcObj, %dstObj, %srcRef, %dstRef, %time, %normal, %contactCount, %contact)
+{
+
+     //This code handles collision with the hitbox
+     if(%dstObj.class $= "playerHitBox" && !%srcObj.dead)
+     {
+
+          //If the player is attacking when the enemy contacts them...
+          if($pGuy.Attacking && !%srcObj.Damaged)
+             {
+            
+                   %DamageBase = 1;
+                   
+                   //Determine what element the exec is currently vulnerable too.
+                   
+                   if($exec.SwordType $= "flame" && $pGuy.SwordType $= "ice")
+                   {
+                          %DamageMod = 1;
+                          $ExecHurt = true;
+                   }
+                   
+                   else if($exec.SwordType $= "ice" && $pGuy.SwordType $= "flame")
+                   {
+                          %DamageMod = 1;
+                          $ExecHurt = true;
+                   }
+                   
+                   else if($exec.SwordType $= "holy" && $pGuy.SwordType $= "demonic")
+                   {
+                           %DamageMod = 1;
+                           $ExecHurt = true;                           
+                   }
+                   
+                   else if($exec.SwordType $= "demonic" && $pGuy.SwordType $= "holy")
+                   {
+                           %DamageMod = 1;
+                           $ExecHurt = true;                           
+                   }    
+                   else
+                   {
+                           %DamageMod = 0;
+                           $ExecHurt = false;
+                   }
+                    
+                   %DamageDone = %DamageBase*%DamageMod;
+
+                   if($ExecHurt)  //only bother applying damage if the exec was hit with an element that would hurt him
+                   {
+                      //Make the enemy invulnerable for a short period of time to prevent double hits
+                      $exec.Damaged = true;
+                      alxPlay ( execSound_jump ); 
+                      ExecDamageFlashOn();
+                      schedule(500, 0, "execHurtAgain");
+                      //$sarah.setTimerOn(500);
+                      
+                      //Subtract that amount of damage from the enemy
+                      $exec.Health = $exec.Health - %DamageDone;
+                      $eExecSwitchTimer = $eExecSwitchTimer + 1;
+                   }
+                   else if(!$ExecHurt)
+                   {
+                      $exec.Damaged = true;
+                      schedule(500, 0, "execHurtAgain");                      
+                      //$sarah.setTimerOn(500);
+                   }
+
+                   if($exec.Health < 1) //if the boss is out of health, kill it.
+                   {
+                      //Kill the enemy
+                      //%this.playSound "THWACK!"
+                       //%srcObj.setTimerOff(); //turn off the enemy's AI timer--it no longer needs to check for new movement
+                       ExecStage3.setVisible(false);
+                       %srcObj.dead = true; //the rat is dead!
+                       %srcObj.setTimerOff();
+                       %srcObj.setLinearVelocityX(0); //stop whatever movement it had when it was killed
+                       ExecStage3.setVisible(false);
+                       
+                       %execPosition = %srcObj.getPositionX();
+                       %execPositionY = %srcObj.getPositionY();
+                    
+                          //Create a nice bloodsplatter on hit =======================
+                          // This is all the code to load a particleeffect on the fly
+
+                          %explosion = new t2dParticleEffect() 
+                          { 
+                           scenegraph = $pGuy.scenegraph; 
+                          };
+                          %explosion.loadEffect("~/data/particles/kaPow.eff");
+                          %explosion.setEffectLifeMode("KILL", 0.15);
+                          %explosion.setPosition(%execPosition, %execPositionY);
+                          %explosion.playEffect();
+                          
+                          alxPlay( noahSound_break );                             
+                          alxPlay (execSound_damage);
+                          // =========================================================
+                    
+                        %srcObj.setLayer(6);
+                        %srcObj.setCollisionLayers("0 1 3 4 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31");                    
+
+                       ExecStage3.setVisible(false);                        
+                       %srcObj.playAnimation(execDeathAnim);
+                       %srcObj.setLinearVelocityY(-2);
+                       schedule(500, 0, "PlayHaunted");
+                       $dodeathskull = true;
+                       schedule(500, 0, "DeathSkulls"); 
+                       schedule(6000, 0, "ExecFinalDeath");                      
+
+                       ExecHoly.setVisible(false);
+                       ExecDemonic.setVisible(false);
+                       ExecIce.setVisible(false);
+                       ExecFlame.setVisible(false);
+                       ExecStage1.setVisible(false);
+                       ExecFlash1.setVisible(false);
+                       ExecStage2.setVisible(false);
+                       ExecFlash2.setVisible(false);
+                       ExecStage3.setVisible(false);
+                       ExecFlash3.setVisible(false);
+                       ExecDeath.setVisible(true);                       
+                   
+                   }
+                   else //if the enemy still has health remaining, knock it back and make it invulnerable for a short period of time
+                   {
+                       //Now find out if the player is to the left or right of the zombie.
+                       //Get the X position of the player and the zombie at the time of attack and save them in local variables
+                       %playerPosition = $pGuy.getPositionX();
+                       %execPosition = %srcObj.getPositionX();
+
+                       if(!$execHurt)
+                       {
+                           if($exec.TauntTimer > 2)
+                           {
+                            alxPlay( execSound_wrongelement );
+                            $exec.TauntTimer = 0;                              
+                           }
+                           else
+                           {
+                            $exec.TauntTimer = $exec.TauntTimer + 1;                              
+                           }
+                           
+                           alxPlay( noahSound_attack ); 
+                           alxPlay (noahSound_wrongIce);
+                       }
+
+                       else                       
+                       {
+                           alxPlay( execSound_jump);                           
+                           alxPlay( noahSound_attack ); 
+                           alxPlay( noahSound_breakIce );
+                       }
+                   }
+   
+             }
+         }
+      
+     //This code handles collision with the player
+     if(%dstObj.class $= "PlayerClass" && !%srcObj.dead) //check if the object colliding with the enemy is the player
+      {             
+             if(!%dstObj.Damaged && !%srcObj.dead) //if the player hasn't previously been damaged, isn't attacking, and the rat isn't dead...
+             {
+                 
+                 $pHealth = $pHealth - $eExecDamageDone; // decrement the player's health by eDamageDone                 
+                 
+                   if($pHealth < 1 && !$PlayerDead)
+                    {
+                    $PlayerDead = true;
+                    KillPlayer();   
+                    }
+                   else if(!$PlayerDead)
+                    {                 
+                    %dstObj.Damaged = true; //set the player to damaged to avoid double hits
+                    %dstObj.playDamageSound(); //set this so we'll play the damaged sound once                                 
+                    %dstObj.setTimerOn($pInvincibleDelay); //set the player's timer on so he flashes.
+                    %dstObj.hurtloop = 0; //reset the player's hurt loop
+
+                    %dstObj.UpdateGUI(); //update the armor graph                  
+                
+                    //Since the player got nailed by an enemy, let's give him a little toss too.
+                    %dstObj.setLinearVelocityY($eExecHurtSpeed);
+                
+                    //Also, if he was crouched, getting hit knocks him out of crouch.
+                    %dstObj.Crouch = false;
+                    }
+            }
+      }
+          
+}
+
+
+function execClass::onTimer(%this) //each time the boss's timer goes off, we'll update the AI
+{
+      //We are going to update the AI once every half second.
+      
+      //Check to see how damaged the Executioner is... the more damaged, the faster he walks
+      if($exec.Health < 21 && $exec.Health > 11 && $exec.Stage == 1)
+      {
+       $eExecWalkSpeed = 20; //LVX - sets the walk speed of the Executioner
+       $exec.AnimSpeed = 0;
+       $exec.Stage = 2;
+      }
+      else if($exec.Health < 11 && $exec.Stage == 2)
+      {
+       $eExecWalkSpeed = 24; //LVX - sets the walk speed of the Executioner 
+       $exec.AnimSpeed = 0;
+       $exec.Stage = 3;
+      }
+      
+      
+      //Get the position of both the player and exec    
+      %playerPos = $pGuy.getPositionX();
+      %execPos = $exec.getPositionX();
+      
+      //Orient the executioner toward the player
+      if(%playerPos < %execPos)  //then the player is to the left of the exec, so orient him left
+      {
+          if(%execPos < -75)
+          {
+           
+           if(!%this.Cornered)
+           {
+            $exec.AttackTimer = 4;
+            %this.Cornered = true;              
+           }
+           
+           %this.FacingLeft = true;
+           %this.moveLeft = false;
+           %this.moveRight = false;  
+           %this.Walking = false;            
+          }
+          else
+          {
+           %this.moveLeft = true; 
+           %this.FacingLeft = true;
+           %this.moveRight = false;        
+           %this.Walking = true;
+          }
+      }
+      else //then the player is to the right of the exec
+      {
+          if(%execPos > 90)
+          {
+
+           if(!%this.Cornered)
+           {
+            $exec.AttackTimer = 4;
+            %this.Cornered = true;  
+           }
+
+           %this.FacingRight = false;
+           %this.moveLeft = false;
+           %this.moveRight = false; 
+           %this.Walking = false;            
+          }
+          else
+          {
+           %this.moveRight = true;
+           %this.FacingLeft = false;
+           %this.moveLeft = false;
+           %this.Walking = true;                    
+          }
+      }
+      
+      if(%execPos > -65 && %execPos < 85)
+      {
+       %this.Cornered = false;         
+      }
+      
+      //As long as the exec is not dead...
+      if(!%this.dead)
+      {
+       %this.updateMovement();  //let's update the exec's animation each time it moves             
+      }
+      else
+      {
+        ExecHoly.setVisible(false);
+        ExecDemonic.setVisible(false);
+        ExecIce.setVisible(false);
+        ExecFlame.setVisible(false);
+        ExecStage1.setVisible(false);
+        ExecFlash1.setVisible(false);
+        ExecStage2.setVisible(false);
+        ExecFlash2.setVisible(false);
+        ExecStage3.setVisible(false);
+        ExecFlash3.setVisible(false);
+        ExecDeath.setVisible(true); 
+      }
+   ExecFlash1.setVisible(false); 
+   ExecFlash2.setVisible(false);
+   ExecFlash3.setVisible(false);
+}
+
+function execHurtAgain(%this)
+{
+ $exec.Damaged = false; 
+}
+
+//This function plays an animation to it's end
+//Call it as the following
+//
+// %this.playAnimToEnd(playerWalk);
+//
+function execClass::playAnimToEnd(%this, %animation)
+
+{
+   if(%this.getAnimationName() $= %animation)
+   {  
+
+      //echo("first check");
+      if(%this.getIsAnimationFinished())
+      {
+         //echo("trying to play");
+         %this.playAnimation(%animation);
+      }
+   }
+   else
+   {     
+         //echo("second check");
+         %this.playAnimation(%animation);
+   }
+}
+
+function ExecAttackWindUp()
+{
+  if(!$exec.dead)
+  {
+
+           //$exec.setCollisionActive(false, false); 
+           $exec.setCollisionLayers("0 1 3 4 5 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31");
+               //Code block to determine element
+               if($exec.SwordType $= "demonic")
+               {
+                %objectAnim = execAttack_Demonic;   
+               }
+               if($exec.SwordType $= "holy")
+               {
+                %objectAnim = execAttack_Holy;   
+               }                          
+               if($exec.SwordType $= "flame")
+               {
+                %objectAnim = execAttack_Flame; 
+               }
+               if($exec.SwordType $= "ice")
+               {
+                %objectAnim = execAttack_Ice;    
+               }         
+         
+         $exec.playAnimToEnd(%objectAnim);
+         
+         $pGuy.FlashCounter = 0;
+         $pGuy.FlashOn = true;
+         BoostFlash();
+
+   schedule(2000, 0, "ExecAttackDown");
+   }
+}
+
+function ExecAttackDown()
+{
+  if(!$exec.dead)
+  {
+
+          $exec.setCollisionLayers("0 1 2 3 4 5 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31");
+
+          if($exec.FacingLeft)
+          {
+           alxPlay (execSound_attack_02);
+           
+           echo("Tossing a hitbox");
+           //$exec.setCollisionActive(true, true); 
+           $exec.setCollisionLayers("0 1 2 3 4 5 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31");
+           
+                       //Code block to determine element
+                       if($exec.SwordType $= "demonic")
+                       {
+                        %objectAnim = execAttackDown_Demonic;   
+                       }
+                       if($exec.SwordType $= "holy")
+                       {
+                        %objectAnim = execAttackDown_Holy;   
+                       }                          
+                       if($exec.SwordType $= "flame")
+                       {
+                        %objectAnim = execAttackDown_Flame; 
+                       }
+                       if($exec.SwordType $= "ice")
+                       {
+                        %objectAnim = execAttackDown_Ice;    
+                       }         
+                 
+                 $exec.playAnimToEnd(%objectAnim);   
+
+           $exec.CreateAttackBox(-65, 0, 6, -12, 0, 0);
+           $exec.CreateAttackBox(-65, 0, 6, -14, -10, 0);
+           $exec.CreateAttackBox(-65, 0, 6, -16, -15, 0);
+           $exec.CreateAttackBox(-65, 0, 6, -18, -20, 0);
+           $exec.CreateAttackBox(-65, 0, 6, -20, -25, 0);
+           $exec.CreateAttackBox(-100, 0, 0.15, 0, 10, 0);
+           schedule(500, 0, "ExecStay");
+          }
+          else
+          {
+           alxPlay (execSound_attack_02);
+           echo("Tossing a hitbox");
+           //$exec.setCollisionActive(true, true);   
+            $exec.setCollisionLayers("0 1 2 3 4 5 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31");
+           
+                       //Code block to determine element
+                       if($exec.SwordType $= "demonic")
+                       {
+                        %objectAnim = execAttackDown_Demonic;   
+                       }
+                       if($exec.SwordType $= "holy")
+                       {
+                        %objectAnim = execAttackDown_Holy;   
+                       }                          
+                       if($exec.SwordType $= "flame")
+                       {
+                        %objectAnim = execAttackDown_Flame; 
+                       }
+                       if($exec.SwordType $= "ice")
+                       {
+                        %objectAnim = execAttackDown_Ice;    
+                       }         
+                 
+                 $exec.playAnimToEnd(%objectAnim);  
+           $exec.CreateAttackBox(65, 0, 6, 20, 0, 0);
+           $exec.CreateAttackBox(65, 0, 6, 18, -10, 0);
+           $exec.CreateAttackBox(65, 0, 6, 16, -15, 0);
+           $exec.CreateAttackBox(65, 0, 6, 14, -20, 0);
+           $exec.CreateAttackBox(65, 0, 6, 12, -25, 0);
+           $exec.CreateAttackBox(100, 0, 0.15, 0, 10, 0);
+           schedule(500, 0, "ExecStay");
+          }
+
+  }
+}
+
+function ExecStay()
+{
+  if(!$exec.dead)
+  {
+
+               //Code block to determine element
+               if($exec.SwordType $= "demonic")
+               {
+                %objectAnim = execAttackStay_Demonic;   
+               }
+               if($exec.SwordType $= "holy")
+               {
+                %objectAnim = execAttackStay_Holy;   
+               }                          
+               if($exec.SwordType $= "flame")
+               {
+                %objectAnim = execAttackStay_Flame; 
+               }
+               if($exec.SwordType $= "ice")
+               {
+                %objectAnim = execAttackStay_Ice;    
+               }         
+         
+         $exec.playAnimToEnd(%objectAnim);  
+
+   schedule(500, 0, "ExecReturn");   
+  }
+}
+
+function ExecReturn()
+{
+ if(!$exec.dead)
+ {
+   $exec.setImmovable(false);
+   $exec.setTimerOn(500);
+ }
+}
+
+function execClass::CreateAttackBox(%this, %BoxVelocityX, %BoxVelocityY, %LifeTime, %XOffset, %YOffset, %Rotation)
+{
+   //echo ("Launching a hitbox");
+   
+   %ExecPosX = $exec.getPositionX();
+   %ExecPosY = $exec.getPositionY();
+
+   %HitBoxVelocityX = %BoxVelocityX;
+   %HitBoxVelocityY = %BoxVelocityY;
+   %HitBoxLifeTime = %LifeTime;
+   %HitBoxXOffset = %XOffset;
+   %HitBoxYOffset = %YOffset;
+   %HitBoxRotation = %Rotation;
+
+   //echo (%SkelPosX);
+   //echo (%SkelPosY);
+   
+   %this.execHitBox = new t2dAnimatedSprite()
+	{
+		scenegraph = %this.scenegraph;
+		class = execHitBox;
+	};
+	
+	%this.execHitBox.launchHitBox(%ExecPosX, %ExecPosY, %HitBoxVelocityX, %HitBoxVelocityY, %HitBoxLifeTime, %HitBoxXOffset, %HitBoxYOffset, %HitBoxRotation);   
+}
+
+function ExecElementGUI()
+{
+  //Update background element
+  if($exec.SwordType $= "holy")
+   {
+    ExecHoly.setVisible(true);
+    ExecDemonic.setVisible(false);
+    ExecIce.setVisible(false);
+    ExecFlame.setVisible(false);    
+   }
+
+  if($exec.SwordType $= "demonic")
+   {
+    ExecDemonic.setVisible(true);
+    ExecHoly.setVisible(false);
+    ExecIce.setVisible(false);
+    ExecFlame.setVisible(false); 
+   }
+
+  if($exec.SwordType $= "ice")
+   {
+    ExecIce.setVisible(true);
+    ExecHoly.setVisible(false);
+    ExecDemonic.setVisible(false);
+    ExecFlame.setVisible(false); 
+   }
+
+  if($exec.SwordType $= "flame")
+   {
+    ExecFlame.setVisible(true);
+    ExecHoly.setVisible(false);
+    ExecDemonic.setVisible(false);
+    ExecIce.setVisible(false); 
+   }  
+}
+
+function ExecDamageFlashOn()
+{
+  //Flash the executioner's health bar on successful hits
+  if($exec.Stage == 1)
+  {
+   ExecFlash1.setVisible(true);
+   ExecStage1.setVisible(false);
+   schedule(200, 0, "ExecDamageFlashOff");
+  }
+
+  if($exec.Stage == 2)
+  {
+   ExecFlash2.setVisible(true);
+   ExecStage2.setVisible(false);
+   schedule(200, 0, "ExecDamageFlashOff");
+  }
+
+  if($exec.Stage == 3)
+  {
+   ExecFlash3.setVisible(true);
+   ExecStage3.setVisible(false);
+   schedule(200, 0, "ExecDamageFlashOff");
+  }
+}
+
+
+function ExecDamageFlashOff()
+{
+  //Flash the executioner's health bar on successful hits
+  if($exec.Stage == 1)
+  {
+   ExecStage1.setVisible(true);
+   ExecFlash1.setVisible(false);  
+  }
+
+  if($exec.Stage == 2)
+  {
+   ExecStage2.setVisible(true);
+   ExecFlash2.setVisible(false); 
+  }
+
+  if($exec.Stage == 3)
+  {
+   ExecStage3.setVisible(true);
+   ExecFlash3.setVisible(false); 
+  }
+}
+
+function PlayHaunted()
+{
+ alxStopAll();
+ alxPlay(envSound_HauntingVoices);
+ sceneWindow2D.startCameraShake(50, 7.3);
+ ExecStage3.setVisible(false); //I'm putting this everywhere cause Torque doesn't want to do it.
+}
+
+function DeathSkulls()
+{
+
+    ExecStage3.setVisible(false); //I'm putting this everywhere cause Torque doesn't want to do it.
+
+    $exec.moveLeft = false;
+    $exec.moveRight = false;
+
+     //Choose a random element     
+     %newElement = getRandom(0,3);
+     
+        //Now get ready to apply it to the Executioner
+        if(%newElement == 0)
+        {
+          %SwordTypeTemp = "ice";  
+        }
+        else if(%newElement == 1)
+        {
+          %SwordTypeTemp = "flame";         
+        }
+        else if(%newElement == 2)
+        {
+          %SwordTypeTemp = "holy";         
+        }
+        else if(%newElement == 3)
+        {
+          %SwordTypeTemp = "demonic";         
+        }
+
+   $exec.SwordType = %SwordTypeTemp;
+
+   if($exec.deathskulls == 1)
+   {
+    $exec.FacingLeft = false;
+    $exec.CreateAttackBox(90, 0, 6, 0, 0, 0);
+    $exec.deathskulls = 2;
+   }
+   else if($exec.deathskulls == 2)
+   {
+    $exec.FacingLeft = false;
+    $exec.CreateAttackBox(90, 90, 6, 0, 0, 45);
+    $exec.deathskulls = 3;
+   }
+   else if($exec.deathskulls == 3)
+   {
+    $exec.FacingLeft = true;
+    $exec.CreateAttackBox(0, 90, 6, 0, 0, 270);
+    $exec.deathskulls = 4;
+   }
+   else if($exec.deathskulls == 4)
+   {
+    $exec.FacingLeft = true;
+    $exec.CreateAttackBox(-90, 90, 6, 0, 0, 315);
+    $exec.deathskulls = 5;
+   }
+   else if($exec.deathskulls == 5)
+   {
+    $exec.FacingLeft = true;
+    $exec.CreateAttackBox(-90, 0, 6, 0, 0, 0);
+    $exec.deathskulls = 6;
+   }
+   else if($exec.deathskulls == 6)
+   {
+    $exec.FacingLeft = true;
+    $exec.CreateAttackBox(-90, -90, 6, 0, 0, 45);
+    $exec.deathskulls = 7;
+   }
+   else if($exec.deathskulls == 7)
+   {
+    $exec.FacingLeft = true;
+    $exec.CreateAttackBox(0, -90, 6, 0, 0, 90);
+    $exec.deathskulls = 8;
+   }
+   else if($exec.deathskulls == 8)
+   {
+    $exec.FacingLeft = false;
+    $exec.CreateAttackBox(90, -90, 6, 0, 0, -45);
+    $exec.deathskulls = 1;
+   }
+
+   if($dodeathskull)
+   {
+    schedule(200, 0, "DeathSkulls");
+   }
+   else
+   {
+    return;
+   }
+}
+
+function ExecFinalDeath()
+{
+ ExecStage3.setVisible(false); //I'm putting this everywhere cause Torque doesn't want to do it.
+ $exec.Walking = false; 
+ $exec.playAnimation(execCorpse);
+ $exec.setLinearVelocityY(0);
+ schedule(1800, 0, "ExecExplode");
+ schedule(2000, 0, "ExecDelete");
+}
+
+function ExecExplode()
+{
+    %execPosition = $exec.getPositionX();
+    %execPositionY = $exec.getPositionY();
+                    
+                          //Create a big darn explosion =======================
+                          // This is all the code to load a particleeffect on the fly
+
+                          %explosion = new t2dParticleEffect() 
+                          { 
+                           scenegraph = $pGuy.scenegraph; 
+                          };
+                          %explosion.loadEffect("~/data/particles/big_explosion.eff");
+                          %explosion.setEffectLifeMode("KILL", 1.0);
+                          %explosion.setPosition(%execPosition, %execPositionY);
+                          %explosion.playEffect();
+                                                       
+                          alxPlay (envSound_explode);
+                          // =========================================================
+
+  sceneWindow2D.startCameraShake(300, 1);
+  $dodeathskulls = false;
+}
+
+function ExecDelete()
+{
+ ExecDeath.setVisible(false); 
+ $dodeathskull = false;
+ $exec.safeDelete();
+ schedule(5000, 0, "loadE1splash");
+
+   ExecDemonic.setVisible(false);   //hide the boss health graphics
+   ExecHoly.setVisible(false);
+   ExecIce.setVisible(false);
+   ExecFlame.setVisible(false);
+   ExecStage1.setVisible(false);
+   ExecStage2.setVisible(false);
+   ExecStage3.setVisible(false);
+   ExecFlash1.setVisible(false);
+   ExecFlash2.setVisible(false);
+   ExecFlash3.setVisible(false);
+   ExecDeath.setVisible(false);
+   BoostFlash.setVisible(false);
+   GameOver.setVisible(false);
+}
